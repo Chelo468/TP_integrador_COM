@@ -113,7 +113,7 @@ void leerHumedad(){
   // Comprobamos si ha habido algún error en la lectura
   if (isnan(h) || isnan(t) || isnan(f)) {
     Serial.println("Error obteniendo los datos del sensor DHT11");
-    
+    mostrarEnConsola("Error obteniendo los datos del sensor DHT11");
   }
   else  {
       // Calcular el índice de calor en Fahrenheit
@@ -138,6 +138,8 @@ void leerHumedad(){
         Serial.print(" *C ");
         Serial.print(hif);
         Serial.println(" *F");
+
+        mostrarEnConsola("Humedad: " + String(h) + " Temperatura: " + String(t) + " ºC");
      }
     
     if(t > temperatura_alarma)
@@ -155,6 +157,8 @@ void leerSensorSonido(){
   {
     Serial.println("Microfono detectado.");
     alarma("Sonido");
+
+    mostrarEnConsola("Microfono detectado.");
   }
 }
 
@@ -165,6 +169,8 @@ void leerSensorMovimiento(){
   {
     Serial.println("Movimiento detectado.");
     alarma("Movimiento");
+
+    mostrarEnConsola("Movimiento detectado.");
   }
 }
 
@@ -176,6 +182,8 @@ void leerSensorProximidad(){
   {
     Serial.println("Objeto aproximado.");
     alarma("Proximidad");
+
+    mostrarEnConsola("Objeto aproximado.");
   }
   
 }
@@ -238,10 +246,14 @@ void alarma(String tipo){
 
 void reconnect() {
   
-  Serial.println("Connecting to MQTT Broker...");
+  Serial.println("Conectando a Broker MQTT...");
+
+  mostrarEnConsola("Conectando a Broker MQTT...");
   
   while (!mqttClient.connected()) {
-      Serial.println("Reconnecting to MQTT Broker..");
+      Serial.println("Reonectando a Broker MQTT...");
+
+      mostrarEnConsola("Reonectando a Broker MQTT...");
       String clientId = "ESP32Client-";
       clientId += String(random(0xffff), HEX);
       
@@ -291,4 +303,25 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
 
   
+}
+
+void mostrarEnConsola(String mensaje){
+    int n = mensaje.length();
+ 
+    // declaring character array
+    char char_array[n + 1];
+ 
+    // copying the contents of the
+    // string to char array
+    strcpy(char_array, mensaje.c_str());
+
+    // copying the contents of the
+    // string to char array
+    strcpy(char_array, mensaje.c_str());
+ 
+    for (int i = 0; i < n; i++)
+        char_array[i] = mensaje[i];
+
+    if (mqttClient.connected())
+      mqttClient.publish("/com/consola", char_array);
 }
