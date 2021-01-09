@@ -44,6 +44,7 @@ int mostrar = 0;
 
 //DHT
 DHT dht(DHTPIN, DHTTYPE);
+float temperatura_alarma = 28;
 
 
 //SONIDO
@@ -76,7 +77,6 @@ void setup() {
 
   //Inicializamos modulo dht
   dht.begin();
-
 
   //WIFI
   configurarYConectarWifi();
@@ -173,7 +173,22 @@ void loop() {
   }*/
 
   //DHT
-contCiclo++;
+leerHumedad();
+
+//SONIDO
+leerSensorSonido();
+
+  //TACOMETRO
+leerSensorMovimiento();
+
+  //PROXIMIDAD
+leerSensorProximidad(); 
+
+  delay(100);
+}
+
+void leerHumedad(){
+  contCiclo++;
   // Leemos la humedad relativa
   float h = dht.readHumidity();
   // Leemos la temperatura en grados centígrados (por defecto)
@@ -186,43 +201,42 @@ contCiclo++;
     Serial.println("Error obteniendo los datos del sensor DHT11");
     
   }
-else
-{
-    // Calcular el índice de calor en Fahrenheit
-    float hif = dht.computeHeatIndex(f, h);
-    // Calcular el índice de calor en grados centígrados
-    float hic = dht.computeHeatIndex(t, h, false);
+  else  {
+      // Calcular el índice de calor en Fahrenheit
+      float hif = dht.computeHeatIndex(f, h);
+      // Calcular el índice de calor en grados centígrados
+      float hic = dht.computeHeatIndex(t, h, false);
+  
+      //Cada 10 tenemos 1 segundo por el delay de 100
+     if(contCiclo == 300)
+     {
+        contCiclo = 0;
+        Serial.print("Humedad: ");
+        Serial.print(h);
+        Serial.print(" %\t");
+        Serial.print("Temperatura: ");
+        Serial.print(t);
+        Serial.print(" *C ");
+        Serial.print(f);
+        Serial.print(" *F\t");
+        Serial.print("Índice de calor: ");
+        Serial.print(hic);
+        Serial.print(" *C ");
+        Serial.print(hif);
+        Serial.println(" *F");
+     }
 
-    //Cada 10 tenemos 1 segundo por el delay de 100
-   if(contCiclo == 300)
-   {
-      contCiclo = 0;
-      Serial.print("Humedad: ");
-      Serial.print(h);
-      Serial.print(" %\t");
-      Serial.print("Temperatura: ");
-      Serial.print(t);
-      Serial.print(" *C ");
-      Serial.print(f);
-      Serial.print(" *F\t");
-      Serial.print("Índice de calor: ");
-      Serial.print(hic);
-      Serial.print(" *C ");
-      Serial.print(hif);
-      Serial.println(" *F");
-   }
-
-  if(t > 28)
-  {
-    alarma("Temperatura " + String(t) + " ºC");
+    //Serial.println("Temperatura limite: " + String(temperatura_alarma));
+    
+    if(t > temperatura_alarma)
+    {
+      alarma("Temperatura " + String(t) + " ºC");
+    }
   }
 }
 
-
- 
-
-  //SONIDO
-
+void leerSensorSonido(){
+  
   valor_sonido = digitalRead(PINSONIDO_DIGITAL);
 
   if(valor_sonido == HIGH)
@@ -230,8 +244,9 @@ else
     Serial.println("Microfono detectado.");
     alarma("Sonido");
   }
+}
 
-  //TACOMETRO
+void leerSensorMovimiento(){
   valor_tacometro = digitalRead(PIN_TACOMETRO_GIRO);
 
   if(valor_tacometro == LOW)
@@ -239,9 +254,10 @@ else
     Serial.println("Movimiento detectado.");
     alarma("Movimiento");
   }
+}
 
-  //PROXIMIDAD
-
+void leerSensorProximidad(){
+  
   valor_proximidad = digitalRead(PIN_PROXIMIDAD);
 
   if(valor_proximidad == LOW)
@@ -249,13 +265,10 @@ else
     Serial.println("Objeto aproximado.");
     alarma("Proximidad");
   }
-
- 
-
-  delay(100);
+  
 }
 
-configurarPines(){
+void configurarPines(){
   
   ledcSetup(LEDC_CHANNEL_0, LEDC_BASE_FREQ, LEDC_TIMER_8_BIT);
   ledcAttachPin(LED_PIN1, LEDC_CHANNEL_0);
@@ -280,6 +293,7 @@ void configurarYConectarWifi(){
     Serial.print(".");
     delay(500);
   }
+  
   Serial.print("Connected.");
 }
 
@@ -323,19 +337,23 @@ void reconnect() {
         Serial.println("Connected.");
         // subscribe to topic
         mqttClient.subscribe("/swa/commands");
+        mqttClient.subscribe("/com/cuna/configTemperaturaMinima");
       }
       
   }
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
+
+  String topico;
+  String mensaje;
+  
   Serial.print("Callback - Topic: ");
 
   for (int i = 0; i < strlen(topic); i++) {
     Serial.print((char)topic[i]);
+    topico = topico + (char)payload[i];
   }
-
-String mensaje;
   
   Serial.print(" ; Message:");
   for (int i = 0; i < length; i++) {
@@ -345,6 +363,20 @@ String mensaje;
   }
 
   Serial.println(mensaje);
+
+  
+  if (strcmp(topic,"/com/cuna/configTemperaturaMinima")==0){
+    // whatever you want for this topic
+    temperatura_alarma = mensaje.toFloat(); 
+  }
+
+
+  /*if(topico == "/com/cuna/configTemperaturaMinima")
+  {
+    temperatura_alarma = mensaje.toFloat(); 
+
+    Serial.print(String(temperatura_alarma));
+  }*/
 
   if(mensaje == "alarma")
   {
