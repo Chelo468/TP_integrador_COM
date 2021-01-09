@@ -4,8 +4,6 @@
 
 
 #define LED_PIN1                15
-//#define HCSR04_TRIGGER        18
-//#define HCSR04_ECHO           19
 
 //Sensor Proximidad
 #define PIN_PROXIMIDAD          19
@@ -19,7 +17,7 @@
 #define PINSONIDO_ANALOGICO     26
 
 //Sensor tacometro
-#define PIN_TACOMETRO_GIRO      27
+#define PIN_SENSOR_GOLPE        27
 
 //BUZZER
 #define PIN_BUZZER              3
@@ -28,30 +26,17 @@
 #define LEDC_TIMER_8_BIT        8
 #define LEDC_BASE_FREQ          5000
 
-int brillo = 0;
-int accion = 0;//0 subir - 1 bajar
-
-int duracion = 0;
-int distancia = 0;
-int contCiclo = 0;
-int contErrores = 0;
-int contReiniciadas = 1;
-
-int apagarLed = 1;
-
-//Temperatura
-int mostrar = 0;
-
-//DHT
+//DHT - Temperatura
 DHT dht(DHTPIN, DHTTYPE);
+int contCiclo = 0;
 float temperatura_alarma = 28;
 
 
 //SONIDO
 int valor_sonido;
 
-//TACOMETRO
-int valor_tacometro;
+//Sensor Golpe
+int valor_sensor_golpe;
 
 //PROXIMIDAD
 int valor_proximidad;
@@ -86,33 +71,7 @@ void setup() {
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-
-  /*if(accion == 0)
-  {
-    if(brillo < 255)
-    {
-      brillo = brillo + 1;  
-    }
-    else
-    {
-      accion = 1;
-      brillo = brillo - 1;      
-    }
-  }
-  else
-  {
-    if(brillo > 0)
-    {
-      brillo = brillo - 1;
-    }
-    else 
-    {
-      accion = 0;
-      brillo = brillo +1;
-    }
-  }*/
-  
+    
  if (!mqttClient.connected())
  {
     reconnect();
@@ -125,70 +84,25 @@ void loop() {
 
   digitalWrite(PIN_BUZZER, LOW);
   
-  //Serial.println("Accion: " + String(accion) + "; Brillo; " + String(brillo));
-
-  //Enviamos un pulso de 1 milisegundo en nivel alto
-  //digitalWrite(HCSR04_TRIGGER, HIGH);
-  
-  //delayMicroseconds(10);
-  
-  //Volvemos el pulso de nivel bajo
-  //digitalWrite(HCSR04_TRIGGER, LOW);
-
-  
-
-  //pulseIn devuelve un valor de tiempo en microsegundos
-  //duracion = pulseIn(HCSR04_ECHO, HIGH);
-
-  //contCiclo = 0;
-  /*while(duracion == 0 && contCiclo < 5)
-  {
-    duracion = pulseIn(HCSR04_ECHO, HIGH);
-    contCiclo++;
-
-    delay(10);
-  }*/
-
-/*
-  if(duracion > 0)
-  {
-      Serial.println("Duracion: " + String(duracion));
-  
-      //Convertimos el tiempo en distancia
-      distancia = duracion / 58.2;
-    
-      Serial.println("Distancia: " + String(distancia));
-  }
-  else
-  {
-    contErrores++;
-
-    if(contErrores == 5)
-    {
-      contErrores = 0;
-      Serial.println("Reiniciado de contador " + String(contReiniciadas));
-
-      contReiniciadas++;
-    }
-  }*/
 
   //DHT
-leerHumedad();
+  leerHumedad();
 
-//SONIDO
-leerSensorSonido();
+  //SONIDO
+  leerSensorSonido();
 
   //TACOMETRO
-leerSensorMovimiento();
+  leerSensorMovimiento();
 
   //PROXIMIDAD
-leerSensorProximidad(); 
+  leerSensorProximidad(); 
 
   delay(100);
 }
 
 void leerHumedad(){
   contCiclo++;
+  
   // Leemos la humedad relativa
   float h = dht.readHumidity();
   // Leemos la temperatura en grados centígrados (por defecto)
@@ -225,8 +139,6 @@ void leerHumedad(){
         Serial.print(hif);
         Serial.println(" *F");
      }
-
-    //Serial.println("Temperatura limite: " + String(temperatura_alarma));
     
     if(t > temperatura_alarma)
     {
@@ -247,9 +159,9 @@ void leerSensorSonido(){
 }
 
 void leerSensorMovimiento(){
-  valor_tacometro = digitalRead(PIN_TACOMETRO_GIRO);
+  valor_sensor_golpe = digitalRead(PIN_SENSOR_GOLPE);
 
-  if(valor_tacometro == LOW)
+  if(valor_sensor_golpe == LOW)
   {
     Serial.println("Movimiento detectado.");
     alarma("Movimiento");
@@ -274,14 +186,12 @@ void configurarPines(){
   ledcAttachPin(LED_PIN1, LEDC_CHANNEL_0);
 
   pinMode(LED_PIN1, OUTPUT);
-  //pinMode(HCSR04_TRIGGER, OUTPUT);
-  //pinMode(HCSR04_ECHO, INPUT);
 
   pinMode(PIN_PROXIMIDAD, INPUT);
 
   pinMode(PINSONIDO_DIGITAL, INPUT);
   
-  pinMode(PIN_TACOMETRO_GIRO, INPUT);
+  pinMode(PIN_SENSOR_GOLPE, INPUT);
 
   pinMode(PIN_BUZZER, OUTPUT);
 }
@@ -305,7 +215,7 @@ void configurarMqtt(){
 
 void alarma(String tipo){
 
-Serial.println("Alarma detectada: " + tipo);
+  Serial.println("Alarma detectada: " + tipo);
   
   ledcWrite(LEDC_CHANNEL_0, 200);
   digitalWrite(PIN_BUZZER, HIGH);
@@ -327,7 +237,9 @@ Serial.println("Alarma detectada: " + tipo);
 }
 
 void reconnect() {
+  
   Serial.println("Connecting to MQTT Broker...");
+  
   while (!mqttClient.connected()) {
       Serial.println("Reconnecting to MQTT Broker..");
       String clientId = "ESP32Client-";
@@ -369,14 +281,6 @@ void callback(char* topic, byte* payload, unsigned int length) {
     // whatever you want for this topic
     temperatura_alarma = mensaje.toFloat(); 
   }
-
-
-  /*if(topico == "/com/cuna/configTemperaturaMinima")
-  {
-    temperatura_alarma = mensaje.toFloat(); 
-
-    Serial.print(String(temperatura_alarma));
-  }*/
 
   if(mensaje == "alarma")
   {
