@@ -29,6 +29,9 @@
 //DHT - Temperatura
 DHT dht(DHTPIN, DHTTYPE);
 int contCiclo = 0;
+
+int alarmaActivada = 0;
+int contAlarma = 0;
 float temperatura_alarma = 28;
 
 
@@ -40,6 +43,12 @@ int valor_sensor_golpe;
 
 //PROXIMIDAD
 int valor_proximidad;
+
+
+//Activacion de alarmas
+int alarma_sonido_activada = 1;
+int alarma_temperatura_activada;
+int alarma_proximidad_activada = 1;
 
 
 //WIFI
@@ -68,6 +77,8 @@ void setup() {
 
   //MQTT
   configurarMqtt();
+
+  alarma_temperatura_activada = 1;
 }
 
 void loop() {
@@ -84,7 +95,8 @@ void loop() {
 
   digitalWrite(PIN_BUZZER, LOW);
   
-
+  alarmaActivada = 0;
+  
   //DHT
   leerHumedad();
 
@@ -97,10 +109,20 @@ void loop() {
   //PROXIMIDAD
   leerSensorProximidad(); 
 
+  if(alarmaActivada == 1)
+  {
+    contAlarma++;
+  }
+  else
+  {
+    contAlarma = 0;
+  }
+
   delay(100);
 }
 
 void leerHumedad(){
+
   contCiclo++;
   
   // Leemos la humedad relativa
@@ -121,7 +143,7 @@ void leerHumedad(){
       // Calcular el índice de calor en grados centígrados
       float hic = dht.computeHeatIndex(t, h, false);
   
-      //Cada 10 tenemos 1 segundo por el delay de 100
+      //Cada 10 tenemos 1 segundo por el delay de 100 milisegundos
      if(contCiclo == 300)
      {
         contCiclo = 0;
@@ -144,7 +166,11 @@ void leerHumedad(){
     
     if(t > temperatura_alarma)
     {
-      alarma("Temperatura " + String(t) + " ºC");
+      if(alarma_temperatura_activada == 1)
+      {
+        
+        alarma("Temperatura " + String(t) + " ºC");  
+      }        
     }
   }
 }
@@ -156,7 +182,12 @@ void leerSensorSonido(){
   if(valor_sonido == HIGH)
   {
     Serial.println("Microfono detectado.");
-    alarma("Sonido");
+
+    if(alarma_sonido_activada == 1)
+    {
+      alarma("Sonido");  
+    }
+    
 
     mostrarEnConsola("Microfono detectado.");
   }
@@ -181,8 +212,12 @@ void leerSensorProximidad(){
   if(valor_proximidad == LOW)
   {
     Serial.println("Objeto aproximado.");
-    alarma("Proximidad");
 
+    if(alarma_proximidad_activada == 1)
+    {
+      alarma("Proximidad");  
+    }
+    
     mostrarEnConsola("Objeto aproximado.");
   }
   
@@ -223,25 +258,40 @@ void configurarMqtt(){
 
 void alarma(String tipo){
 
-  Serial.println("Alarma detectada: " + tipo);
+  alarmaActivada = 1;
+
+  /*if(contAlarma == 0 || contAlarma == 100)
+  {
+    if(contAlarma == 100)
+    {
+      contAlarma = 0;
+    }*/
+    
+    Serial.println("Alarma detectada: " + tipo);
   
-  ledcWrite(LEDC_CHANNEL_0, 200);
-  digitalWrite(PIN_BUZZER, HIGH);
+    ledcWrite(LEDC_CHANNEL_0, 200);
+    digitalWrite(PIN_BUZZER, HIGH);
+  
+    int n = tipo.length();
+   
+      // declaring character array
+      char char_array[n + 1];
+   
+      // copying the contents of the
+      // string to char array
+      strcpy(char_array, tipo.c_str());
+   
+      for (int i = 0; i < n; i++)
+          char_array[i] = tipo[i];
+  
+    if (mqttClient.connected()){
+      mqttClient.publish("/swa/alarma", char_array);
+    }
+      
 
-  int n = tipo.length();
- 
-    // declaring character array
-    char char_array[n + 1];
- 
-    // copying the contents of the
-    // string to char array
-    strcpy(char_array, tipo.c_str());
- 
-    for (int i = 0; i < n; i++)
-        char_array[i] = tipo[i];
-
-  if (mqttClient.connected())
-    mqttClient.publish("/swa/alarma", char_array);
+      
+    //}
+  
 }
 
 void reconnect() {
@@ -262,6 +312,9 @@ void reconnect() {
         // subscribe to topic
         mqttClient.subscribe("/swa/commands");
         mqttClient.subscribe("/com/cuna/configTemperaturaMinima");
+        mqttClient.subscribe("/com/cuna/switchAlarmaSonido");
+        mqttClient.subscribe("/com/cuna/switchAlarmaTemperatura");
+        mqttClient.subscribe("/com/cuna/switchAlarmaProximidad");
       }
       
   }
@@ -286,12 +339,44 @@ void callback(char* topic, byte* payload, unsigned int length) {
     
   }
 
-  Serial.println(mensaje);
+  Serial.println("Mesaje:" + mensaje);
 
+  bool es1 = mensaje == "1";
+  
   
   if (strcmp(topic,"/com/cuna/configTemperaturaMinima")==0){
     // whatever you want for this topic
     temperatura_alarma = mensaje.toFloat(); 
+  }
+
+  if(strcmp(topic,"/com/cuna/switchAlarmaTemperatura")==0){
+    if(es1){
+      Serial.println("entro al true");
+      alarma_temperatura_activada = 1;
+    }
+    else{
+      Serial.println("entro al false");
+      alarma_temperatura_activada = 0;
+    }
+  }
+
+  
+  if(strcmp(topic,"/com/cuna/switchAlarmaSonido")==0){
+    if(es1 == 1){
+      alarma_sonido_activada = 1;
+    }
+    else{
+      alarma_sonido_activada = 0;
+    }
+  }
+
+  if(strcmp(topic,"/com/cuna/switchAlarmaProximidad")==0){
+    if(es1 == 1){
+      alarma_proximidad_activada = 1;
+    }
+    else{
+      alarma_proximidad_activada = 0;
+    }
   }
 
   if(mensaje == "alarma")
