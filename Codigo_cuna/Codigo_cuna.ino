@@ -29,10 +29,12 @@
 //DHT - Temperatura
 DHT dht(DHTPIN, DHTTYPE);
 int contCiclo = 0;
+int cicloRefrescoTemperatura = 0;
 
 int alarmaActivada = 0;
 int contAlarma = 0;
-float temperatura_alarma = 28;
+float temperatura_alarma_minima = 25;
+float temperatura_alarma_maxima = 28;
 
 
 //SONIDO
@@ -55,6 +57,9 @@ int alarma_proximidad_activada = 1;
 const char* SSID = "wifi casa";
 const char* PWD = "MglMcmqybT";
 
+//const char* ssid_inicial = "cuna_red";
+//const char* password_inicial = "123456";
+
 // MQTT client
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient); 
@@ -73,6 +78,7 @@ void setup() {
   dht.begin();
 
   //WIFI
+  //inicializarWiFi();
   configurarYConectarWifi();
 
   //MQTT
@@ -86,8 +92,7 @@ void loop() {
  if (!mqttClient.connected())
  {
     reconnect();
- }
-  
+ }  
   
   mqttClient.loop();
   
@@ -124,6 +129,8 @@ void loop() {
 void leerHumedad(){
 
   contCiclo++;
+
+  cicloRefrescoTemperatura++;
   
   // Leemos la humedad relativa
   float h = dht.readHumidity();
@@ -134,7 +141,6 @@ void leerHumedad(){
 
   // Comprobamos si ha habido algún error en la lectura
   if (isnan(h) || isnan(t) || isnan(f)) {
-    Serial.println("Error obteniendo los datos del sensor DHT11");
     mostrarEnConsola("Error obteniendo los datos del sensor DHT11");
   }
   else  {
@@ -147,32 +153,42 @@ void leerHumedad(){
      if(contCiclo == 300)
      {
         contCiclo = 0;
-        Serial.print("Humedad: ");
-        Serial.print(h);
-        Serial.print(" %\t");
-        Serial.print("Temperatura: ");
-        Serial.print(t);
-        Serial.print(" *C ");
-        Serial.print(f);
-        Serial.print(" *F\t");
-        Serial.print("Índice de calor: ");
-        Serial.print(hic);
-        Serial.print(" *C ");
-        Serial.print(hif);
-        Serial.println(" *F");
 
         mostrarEnConsola("Humedad: " + String(h) + " Temperatura: " + String(t) + " ºC");
      }
-    
-    if(t > temperatura_alarma)
-    {
-      if(alarma_temperatura_activada == 1)
-      {
-        
-        alarma("Temperatura " + String(t) + " ºC");  
-      }        
-    }
+
+     if(cicloRefrescoTemperatura == 50)
+     {
+        cicloRefrescoTemperatura = 0;
+        refrescarTemperatura("Temperatura: "+ String(t) + " ºC");
+     }
+    if(alarma_temperatura_activada == 1)
+     {
+        if(t > temperatura_alarma_maxima || t < temperatura_alarma_minima)
+        {
+          alarma("Temperatura " + String(t) + " ºC");  
+        }        
+     }
   }
+}
+
+void refrescarTemperatura(String mensaje){
+
+  int n = mensaje.length();
+
+  // declaring character array
+  char char_array[n + 1];
+
+  // copying the contents of the
+  // string to char array
+  strcpy(char_array, mensaje.c_str());
+
+  for (int i = 0; i < n; i++)
+      char_array[i] = mensaje[i];
+          
+  if (mqttClient.connected()){
+      mqttClient.publish("/swa/temperatura", char_array);
+    }
 }
 
 void leerSensorSonido(){
@@ -181,7 +197,7 @@ void leerSensorSonido(){
 
   if(valor_sonido == HIGH)
   {
-    Serial.println("Microfono detectado.");
+    //Serial.println("Microfono detectado.");
 
     if(alarma_sonido_activada == 1)
     {
@@ -198,7 +214,7 @@ void leerSensorMovimiento(){
 
   if(valor_sensor_golpe == LOW)
   {
-    Serial.println("Movimiento detectado.");
+    //Serial.println("Movimiento detectado.");
     alarma("Movimiento");
 
     mostrarEnConsola("Movimiento detectado.");
@@ -211,7 +227,7 @@ void leerSensorProximidad(){
 
   if(valor_proximidad == LOW)
   {
-    Serial.println("Objeto aproximado.");
+    //Serial.println("Objeto aproximado.");
 
     if(alarma_proximidad_activada == 1)
     {
@@ -239,6 +255,17 @@ void configurarPines(){
   pinMode(PIN_BUZZER, OUTPUT);
 }
 
+void inicializarWiFi(){
+  
+  WiFi.mode(WIFI_AP);
+  
+  //while(!WiFi.softAP(ssid_inicial, password_inicial))
+  //{
+  //  Serial.println(".");
+  //  delay(100);
+  //}
+}
+
 void configurarYConectarWifi(){
   WiFi.begin(SSID, PWD);
 
@@ -247,7 +274,15 @@ void configurarYConectarWifi(){
     delay(500);
   }
   
-  Serial.print("Connected.");
+  //Serial.print("Conectado a " + SSID);
+
+  String nombre_red;
+
+  for (int i = 0; i < strlen(SSID); i++) {
+    
+    nombre_red = nombre_red + (char)SSID[i];
+  }
+  mostrarEnConsola("Conectado a " + nombre_red);
 }
 
 void configurarMqtt(){
@@ -260,14 +295,15 @@ void alarma(String tipo){
 
   alarmaActivada = 1;
 
-  /*if(contAlarma == 0 || contAlarma == 100)
-  {
+  //if(contAlarma == 0 || contAlarma == 100)
+  //{
     if(contAlarma == 100)
     {
       contAlarma = 0;
-    }*/
+    }
     
-    Serial.println("Alarma detectada: " + tipo);
+    //Serial.println("Alarma detectada: " + tipo);
+    mostrarEnConsola("Alarma detectada: " + tipo);
   
     ledcWrite(LEDC_CHANNEL_0, 200);
     digitalWrite(PIN_BUZZER, HIGH);
@@ -296,19 +332,20 @@ void alarma(String tipo){
 
 void reconnect() {
   
-  Serial.println("Conectando a Broker MQTT...");
+  //Serial.println("Conectando a Broker MQTT...");
 
   mostrarEnConsola("Conectando a Broker MQTT...");
   
   while (!mqttClient.connected()) {
-      Serial.println("Reonectando a Broker MQTT...");
+      //Serial.println("Reonectando a Broker MQTT...");
 
       mostrarEnConsola("Reonectando a Broker MQTT...");
       String clientId = "ESP32Client-";
       clientId += String(random(0xffff), HEX);
       
       if (mqttClient.connect(clientId.c_str())) {
-        Serial.println("Connected.");
+        //Serial.println("Conectado a Broker MQTT.");
+        mostrarEnConsola("Conectado a Broker MQTT.");
         // subscribe to topic
         mqttClient.subscribe("/swa/commands");
         mqttClient.subscribe("/com/cuna/configTemperaturaMinima");
@@ -325,37 +362,37 @@ void callback(char* topic, byte* payload, unsigned int length) {
   String topico;
   String mensaje;
   
-  Serial.print("Callback - Topic: ");
-
   for (int i = 0; i < strlen(topic); i++) {
-    Serial.print((char)topic[i]);
+    
     topico = topico + (char)payload[i];
   }
   
-  Serial.print(" ; Message:");
   for (int i = 0; i < length; i++) {
-    Serial.print((char)payload[i]);
+    
     mensaje = mensaje + (char)payload[i];
     
   }
 
-  Serial.println("Mesaje:" + mensaje);
+  mostrarEnConsola("Topico Recibido: " + topico);
+  mostrarEnConsola("Mesaje Recibido:" + mensaje);
 
   bool es1 = mensaje == "1";
   
   
   if (strcmp(topic,"/com/cuna/configTemperaturaMinima")==0){
     // whatever you want for this topic
-    temperatura_alarma = mensaje.toFloat(); 
+    temperatura_alarma_minima = mensaje.toFloat(); 
+  }
+
+  if(strcmp(topic,"/com/cuna/configTemperaturaMaxima") == 0){
+    temperatura_alarma_maxima = mensaje.toFloat();
   }
 
   if(strcmp(topic,"/com/cuna/switchAlarmaTemperatura")==0){
     if(es1){
-      Serial.println("entro al true");
       alarma_temperatura_activada = 1;
     }
     else{
-      Serial.println("entro al false");
       alarma_temperatura_activada = 0;
     }
   }
@@ -391,6 +428,9 @@ void callback(char* topic, byte* payload, unsigned int length) {
 }
 
 void mostrarEnConsola(String mensaje){
+
+    Serial.println(mensaje);
+  
     int n = mensaje.length();
  
     // declaring character array
