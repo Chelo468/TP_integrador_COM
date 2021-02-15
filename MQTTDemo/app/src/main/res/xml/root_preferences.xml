@@ -1,8 +1,21 @@
 <PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <PreferenceCategory app:title="@string/messages_header">
+    <PreferenceCategory app:title="@string/temperatura_header">
+
+        <SwitchPreferenceCompat
+            app:key="sync_temp"
+            app:title="@string/switch_alarma" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/sonido_header">
+
+        <SwitchPreferenceCompat
+            app:key="sync_sonido"
+            app:title="@string/switch_alarma" />
 
         <EditTextPreference
+            app:dependency="sync_sonido"
             app:key="signature"
             app:title="@string/signature_title"
             app:useSimpleSummaryProvider="true" />
@@ -17,11 +30,11 @@
 
     </PreferenceCategory>
 
-    <PreferenceCategory app:title="@string/sync_header">
+    <PreferenceCategory app:title="@string/proximidad_header">
 
         <SwitchPreferenceCompat
             app:key="sync"
-            app:title="@string/sync_title" />
+            app:title="@string/switch_alarma" />
 
         <SwitchPreferenceCompat
             app:dependency="sync"

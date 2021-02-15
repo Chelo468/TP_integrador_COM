@@ -36,7 +36,7 @@ repositories {
     }
 }
 dependencies {
-
+    compile 'com.yahoo.mobile.client.android.util.rangeseekbar:rangeseekbar-library:0.1.0'
     implementation 'androidx.appcompat:appcompat:1.2.0'
     implementation "androidx.cardview:cardview:1.0.0"
     implementation "androidx.preference:preference:$preference_version"
