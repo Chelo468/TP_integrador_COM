@@ -12,6 +12,8 @@ import androidx.preference.PreferenceManager;
 
 import org.eclipse.paho.client.mqttv3.MqttException;
 
+import static com.example.mqttdemo.Constants.TOPIC_PROXIMIDAD;
+import static com.example.mqttdemo.Constants.TOPIC_SONIDO;
 import static com.example.mqttdemo.Constants.topicAlarmaProximidad;
 import static com.example.mqttdemo.Constants.topicAlarmaSonido;
 import static com.example.mqttdemo.Constants.topicAlarmaTemperatura;
@@ -21,9 +23,13 @@ import static com.example.mqttdemo.MQTTConn.client;
 
 public class Settings extends PreferenceFragmentCompat {
 
+    private SharedPreferences sp;
+
     @Override
     public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
         setPreferencesFromResource(R.xml.root_preferences, rootKey);
+
+        configuracionInicial();
 
         EditTextPreference tempMinima = findPreference("temp_minima");
         EditTextPreference tempMaxima = findPreference("temp_maxima");
@@ -71,6 +77,15 @@ public class Settings extends PreferenceFragmentCompat {
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(getContext());
 
         sp.registerOnSharedPreferenceChangeListener(preferenceChangeListener);
+    }
+
+    private void configuracionInicial() {
+        sp = PreferenceManager.getDefaultSharedPreferences(getContext());
+        publishAlarma(topicAlarmaSonido, sp.getBoolean("switch_sonido", true));
+        publishAlarma(topicAlarmaProximidad, sp.getBoolean("switch_proximidad", true));
+        publishAlarma(topicAlarmaTemperatura, sp.getBoolean("switch_temp", true));
+        publishTemperatura(topicTemperaturaMinima, sp.getString("temp_minima", ""));
+        publishTemperatura(topicTemperaturaMaxima, sp.getString("temp_maxima", ""));
     }
 
     public void publishAlarma (String topic, boolean value) {

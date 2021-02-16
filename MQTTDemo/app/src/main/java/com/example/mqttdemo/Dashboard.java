@@ -1,5 +1,7 @@
 package com.example.mqttdemo;
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Build;
@@ -41,14 +43,9 @@ public class Dashboard extends Fragment implements MqttCallback, IMqttActionList
     private int green = Color.argb(255,60,124,60);
     private int red = Color.argb(255, 204, 0, 0);
 
-
-
-
-
     private static final String PERSISTENT_VARIABLE_BUNDLE_KEY = "persistentVariable";
 
     private TextView persistentVariableEdit;
-
 
     TextView txtTemperaturaActual;
     CardView cardSonido;
@@ -96,17 +93,46 @@ public class Dashboard extends Fragment implements MqttCallback, IMqttActionList
         cardProximidad = (CardView) getView().findViewById(R.id.card_proximidad);
         cardTemperatura = (CardView) getView().findViewById(R.id.card_temperatura);
 
+
         cardProximidad.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                cardProximidad.setCardBackgroundColor(green);
+                AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+                builder.setMessage("Desea desactivar la alarma?")
+                        .setPositiveButton("Si", new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int id) {
+                                cardProximidad.setCardBackgroundColor(green);
+                            }
+                        })
+                        .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int id) {
+                                // User cancelled the dialog
+                            }
+                        });
+                // Create the AlertDialog object and return it
+                AlertDialog dialog = builder.create();
+                dialog.show();
             }
         });
 
         cardSonido.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                cardSonido.setBackgroundColor(green);
+                AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+                builder.setMessage("Desea desactivar la alarma?")
+                        .setPositiveButton("Si", new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int id) {
+                                cardSonido.setBackgroundColor(green);
+                            }
+                        })
+                        .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int id) {
+                                // User cancelled the dialog
+                            }
+                        });
+                // Create the AlertDialog object and return it
+                AlertDialog dialog = builder.create();
+                dialog.show();
             }
         });
 
@@ -156,8 +182,10 @@ public class Dashboard extends Fragment implements MqttCallback, IMqttActionList
             case "/swa/alarma":
                 if (msg.equals("Sonido")) {
                     cardSonido.setCardBackgroundColor(red);
-                } else {
+                } else if (msg.equals("Proximidad")) {
                     cardProximidad.setCardBackgroundColor(red);
+                } else if (msg.contains("Temperatura")){
+                    cardTemperatura.setBackgroundColor(red);
                 }
                 break;
 
