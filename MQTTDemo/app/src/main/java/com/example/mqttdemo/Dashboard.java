@@ -141,10 +141,12 @@ public class Dashboard extends Fragment implements MqttCallback, IMqttActionList
             case TOPIC_TEMPERATURA_ACTUAL:
                 txtTemperaturaActual.setText(msg);
 
-                String tempValue = msg.substring(13, 18);
+                Double tempValue = Double.parseDouble(msg.substring(13, 18));
+                Double tempMinima = Double.parseDouble(sp.getString("temp_minima", "0"));
+                Double tempMaxima = Double.parseDouble(sp.getString("temp_maxima", "0"));
 
-                if (Double.parseDouble(tempValue) < sp.getInt("temp_minima",20)
-                        || Double.parseDouble(tempValue) > sp.getInt("temp_maxima",40)) {
+                if ( tempValue < tempMinima
+                        || tempValue > tempMaxima) {
                     cardTemperatura.setBackgroundColor(red);
                 } else {
                     cardTemperatura.setBackgroundColor(green);
