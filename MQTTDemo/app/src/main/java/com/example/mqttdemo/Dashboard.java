@@ -1,5 +1,6 @@
 package com.example.mqttdemo;
 
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
@@ -9,6 +10,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.cardview.widget.CardView;
 import androidx.fragment.app.Fragment;
+import androidx.preference.PreferenceManager;
 
 import android.view.LayoutInflater;
 import android.view.View;
@@ -35,11 +37,12 @@ import java.nio.charset.StandardCharsets;
 public class Dashboard extends Fragment implements MqttCallback, IMqttActionListener {
 
     private View mRootView;
+    private SharedPreferences sp;
+    private int green = Color.argb(255,60,124,60);
+    private int red = Color.argb(255, 204, 0, 0);
 
-    String topicStr = "/com/cuna/configTemperaturaMinima";
-    String topicAlarmaSonido = "/com/cuna/switchAlarmaSonido";
-    String topicAlarmaTemperatura = "/com/cuna/switchAlarmaTemperatura";
-    String topicAlarmaProximidad = "/com/cuna/switchAlarmaProximidad";
+
+
 
 
     private static final String PERSISTENT_VARIABLE_BUNDLE_KEY = "persistentVariable";
@@ -50,6 +53,7 @@ public class Dashboard extends Fragment implements MqttCallback, IMqttActionList
     TextView txtTemperaturaActual;
     CardView cardSonido;
     CardView cardProximidad;
+    CardView cardTemperatura;
 
 
     public Dashboard() {
@@ -85,21 +89,24 @@ public class Dashboard extends Fragment implements MqttCallback, IMqttActionList
     public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
         Bundle mySavedInstanceState = getArguments();
 
+        sp = PreferenceManager.getDefaultSharedPreferences(getContext());
+
         txtTemperaturaActual = (TextView) getView().findViewById(R.id.txtTemperaturaActual);
         cardSonido = (CardView) getView().findViewById(R.id.card_sonido);
         cardProximidad = (CardView) getView().findViewById(R.id.card_proximidad);
+        cardTemperatura = (CardView) getView().findViewById(R.id.card_temperatura);
 
         cardProximidad.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                cardProximidad.setCardBackgroundColor(Color.argb(255,255,255,255));
+                cardProximidad.setCardBackgroundColor(green);
             }
         });
 
         cardSonido.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                cardSonido.setCardBackgroundColor(Color.argb(255,255,255,255));
+                cardSonido.setBackgroundColor(green);
             }
         });
 
@@ -109,28 +116,6 @@ public class Dashboard extends Fragment implements MqttCallback, IMqttActionList
         }
 
     }
-
-    /*
-    public void publish (View v) {
-        String topic = topicStr;
-        String message = txtTemp.getText().toString();
-        try {
-            client.publish(topic, message.getBytes(), 0, false);
-        } catch (MqttException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void publishAlarmaTemp (View v) {
-        String topic = topicAlarmaTemperatura;
-        boolean message = swithTemp.isChecked();
-        try {
-            client.publish(topic, message ? "1".getBytes() : "0".getBytes(), 0, false);
-        } catch (MqttException e) {
-            e.printStackTrace();
-        }
-    }
-    */
 
     @Override
     public void onSuccess(IMqttToken asyncActionToken) {
@@ -155,14 +140,25 @@ public class Dashboard extends Fragment implements MqttCallback, IMqttActionList
         switch (topic) {
             case TOPIC_TEMPERATURA_ACTUAL:
                 txtTemperaturaActual.setText(msg);
+
+                String tempValue = msg.substring(13, 18);
+
+                if (Double.parseDouble(tempValue) < sp.getInt("temp_minima",20)
+                        || Double.parseDouble(tempValue) > sp.getInt("temp_maxima",40)) {
+                    cardTemperatura.setBackgroundColor(red);
+                } else {
+                    cardTemperatura.setBackgroundColor(green);
+                }
+
                 break;
             case "/swa/alarma":
                 if (msg.equals("Sonido")) {
-                    cardSonido.setCardBackgroundColor(Color.argb(255,255,0,0));
+                    cardSonido.setCardBackgroundColor(red);
                 } else {
-                    cardProximidad.setCardBackgroundColor(Color.argb(255,255,0,0));
+                    cardProximidad.setCardBackgroundColor(red);
                 }
                 break;
+
             default:
                 break;
         }

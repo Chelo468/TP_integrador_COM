@@ -1,47 +1,44 @@
-<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
 
     <PreferenceCategory app:title="@string/temperatura_header">
 
         <SwitchPreferenceCompat
-            app:key="sync_temp"
-            app:title="@string/switch_alarma" />
+            app:key="switch_temp"
+            app:title="@string/switch_alarma"
+            app:defaultValue="true" />
+
+        <EditTextPreference
+            app:key="temp_minima"
+            android:title="Mínimo"
+            android:inputType="numberDecimal"
+            android:digits="0123456789"
+            app:summary="Define la temperatura mínima de la alarma" />
+
+        <EditTextPreference
+            app:key="temp_maxima"
+            android:title="Maximo"
+            android:inputType="numberDecimal"
+            android:digits="0123456789"
+            app:summary="Define la temperatura máxima de la alarma" />
 
     </PreferenceCategory>
 
     <PreferenceCategory app:title="@string/sonido_header">
 
         <SwitchPreferenceCompat
-            app:key="sync_sonido"
-            app:title="@string/switch_alarma" />
-
-        <EditTextPreference
-            app:dependency="sync_sonido"
-            app:key="signature"
-            app:title="@string/signature_title"
-            app:useSimpleSummaryProvider="true" />
-
-        <ListPreference
-            app:defaultValue="reply"
-            app:entries="@array/reply_entries"
-            app:entryValues="@array/reply_values"
-            app:key="reply"
-            app:title="@string/reply_title"
-            app:useSimpleSummaryProvider="true" />
+            app:key="switch_sonido"
+            app:title="@string/switch_alarma"
+            app:defaultValue="true"/>
 
     </PreferenceCategory>
 
     <PreferenceCategory app:title="@string/proximidad_header">
 
         <SwitchPreferenceCompat
-            app:key="sync"
-            app:title="@string/switch_alarma" />
-
-        <SwitchPreferenceCompat
-            app:dependency="sync"
-            app:key="attachment"
-            app:summaryOff="@string/attachment_summary_off"
-            app:summaryOn="@string/attachment_summary_on"
-            app:title="@string/attachment_title" />
+            app:key="switch_proximidad"
+            app:title="@string/switch_alarma"
+            app:defaultValue="true"/>
 
     </PreferenceCategory>
 
