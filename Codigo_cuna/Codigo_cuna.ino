@@ -62,8 +62,8 @@ int contAlarma = 0;
 
 
 //WIFI
-const char* SSID = "wifi casa";
-const char* PWD = "MglMcmqybT";
+const char* SSID = "nombre_de_red";
+const char* PWD = "contraseña_de_red";
 int DELAY_TRY_RECONNECT = 500;//Milisegundos
 
 // MQTT client
