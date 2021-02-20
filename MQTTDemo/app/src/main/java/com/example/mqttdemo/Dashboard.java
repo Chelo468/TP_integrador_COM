@@ -20,6 +20,9 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
 import org.eclipse.paho.android.service.MqttAndroidClient;
 import org.eclipse.paho.client.mqttv3.IMqttActionListener;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
@@ -30,11 +33,16 @@ import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.eclipse.paho.client.mqttv3.logging.LoggerFactory;
 
 import static com.example.mqttdemo.Constants.TOPIC_PROXIMIDAD;
 import static com.example.mqttdemo.Constants.TOPIC_TEMPERATURA_ACTUAL;
 
+import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Logger;
 
 public class Dashboard extends Fragment implements MqttCallback, IMqttActionListener {
 
@@ -86,7 +94,7 @@ public class Dashboard extends Fragment implements MqttCallback, IMqttActionList
     public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
         Bundle mySavedInstanceState = getArguments();
 
-        sp = PreferenceManager.getDefaultSharedPreferences(getContext());
+        sp = Preferences.getInstance(this.getView()).sp;
 
         txtTemperaturaActual = (TextView) getView().findViewById(R.id.txtTemperaturaActual);
         cardSonido = (CardView) getView().findViewById(R.id.card_sonido);
@@ -155,7 +163,7 @@ public class Dashboard extends Fragment implements MqttCallback, IMqttActionList
 
     @Override
     public void connectionLost(Throwable cause) {
-
+        MQTTConn.getInstance(getContext(), this).connectionLost(cause);
     }
 
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
@@ -188,7 +196,20 @@ public class Dashboard extends Fragment implements MqttCallback, IMqttActionList
                     cardTemperatura.setBackgroundColor(red);
                 }
                 break;
-
+            case "/com/cuna/myConfiguration":
+                try {
+                    Config configs = new Gson().fromJson(msg, Config.class);
+                    SharedPreferences.Editor editor = sp.edit();
+                    editor.putString("temp_minima", configs.getTemperatura_minima());
+                    editor.putString("temp_maxima", configs.getTemperatura_maxima());
+                    editor.putBoolean("switch_temp", configs.esAlarmaTemperaturaActivada());
+                    editor.putBoolean("switch_sonido", configs.esAlarmaSonidoActivada());
+                    editor.putBoolean("switch_proximidad", configs.esAlarmaProximidadActivada());
+                    editor.commit();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                break;
             default:
                 break;
         }

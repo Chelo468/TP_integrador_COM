@@ -35,7 +35,8 @@ public class MQTTConn implements MqttCallback, IMqttActionListener {
             "/swa/alarma",
             TOPIC_TEMPERATURA_ACTUAL,
             TOPIC_SONIDO,
-            TOPIC_PROXIMIDAD
+            TOPIC_PROXIMIDAD,
+            "/com/cuna/myConfiguration"
     };
 
     private static MQTTConn mqttConn = null;
