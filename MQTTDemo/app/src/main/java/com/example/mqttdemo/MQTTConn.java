@@ -23,7 +23,7 @@ import static com.example.mqttdemo.Constants.TOPIC_TEMPERATURA_ACTUAL;
 import static com.example.mqttdemo.Constants.USERNAME;
 import static com.example.mqttdemo.Constants.PASSWORD;
 
-public class MQTTConn implements MqttCallback, IMqttActionListener{
+public class MQTTConn implements MqttCallback, IMqttActionListener {
 
     private static Dashboard dashboard;
     private static Context contextLose;
