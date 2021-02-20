@@ -1,0 +1,6 @@
+D:\UTN\03-Tercero\Comunicaciones\TP\TP_Integrador\Codigo_Arduino\ServicioMQTT\Entidades\bin\Release\Entidades.dll
+D:\UTN\03-Tercero\Comunicaciones\TP\TP_Integrador\Codigo_Arduino\ServicioMQTT\Entidades\bin\Release\Entidades.pdb
+D:\UTN\03-Tercero\Comunicaciones\TP\TP_Integrador\Codigo_Arduino\ServicioMQTT\Entidades\obj\Release\Entidades.csprojAssemblyReference.cache
+D:\UTN\03-Tercero\Comunicaciones\TP\TP_Integrador\Codigo_Arduino\ServicioMQTT\Entidades\obj\Release\Entidades.csproj.CoreCompileInputs.cache
+D:\UTN\03-Tercero\Comunicaciones\TP\TP_Integrador\Codigo_Arduino\ServicioMQTT\Entidades\obj\Release\Entidades.dll
+D:\UTN\03-Tercero\Comunicaciones\TP\TP_Integrador\Codigo_Arduino\ServicioMQTT\Entidades\obj\Release\Entidades.pdb

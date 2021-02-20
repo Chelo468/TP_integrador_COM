@@ -1,0 +1,11 @@
+D:\UTN\03-Tercero\Comunicaciones\TP\TP_Integrador\Codigo_Arduino\ServicioMQTT\DataAccess\bin\Release\DataAccess.dll
+D:\UTN\03-Tercero\Comunicaciones\TP\TP_Integrador\Codigo_Arduino\ServicioMQTT\DataAccess\bin\Release\DataAccess.pdb
+D:\UTN\03-Tercero\Comunicaciones\TP\TP_Integrador\Codigo_Arduino\ServicioMQTT\DataAccess\bin\Release\Entidades.dll
+D:\UTN\03-Tercero\Comunicaciones\TP\TP_Integrador\Codigo_Arduino\ServicioMQTT\DataAccess\bin\Release\Newtonsoft.Json.dll
+D:\UTN\03-Tercero\Comunicaciones\TP\TP_Integrador\Codigo_Arduino\ServicioMQTT\DataAccess\bin\Release\Entidades.pdb
+D:\UTN\03-Tercero\Comunicaciones\TP\TP_Integrador\Codigo_Arduino\ServicioMQTT\DataAccess\bin\Release\Newtonsoft.Json.xml
+D:\UTN\03-Tercero\Comunicaciones\TP\TP_Integrador\Codigo_Arduino\ServicioMQTT\DataAccess\obj\Release\DataAccess.csprojAssemblyReference.cache
+D:\UTN\03-Tercero\Comunicaciones\TP\TP_Integrador\Codigo_Arduino\ServicioMQTT\DataAccess\obj\Release\DataAccess.csproj.CoreCompileInputs.cache
+D:\UTN\03-Tercero\Comunicaciones\TP\TP_Integrador\Codigo_Arduino\ServicioMQTT\DataAccess\obj\Release\DataAccess.csproj.CopyComplete
+D:\UTN\03-Tercero\Comunicaciones\TP\TP_Integrador\Codigo_Arduino\ServicioMQTT\DataAccess\obj\Release\DataAccess.dll
+D:\UTN\03-Tercero\Comunicaciones\TP\TP_Integrador\Codigo_Arduino\ServicioMQTT\DataAccess\obj\Release\DataAccess.pdb

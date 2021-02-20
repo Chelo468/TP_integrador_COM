@@ -1,0 +1,62 @@
+﻿<%@ Master Language="C#" AutoEventWireup="true" CodeBehind="Site.master.cs" Inherits="Estadisticas.SiteMaster" %>
+
+<!DOCTYPE html>
+
+<html lang="es">
+<head runat="server">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><%: Page.Title %> - Sitio Admin</title>
+
+    <link href="~/favicon.ico" rel="shortcut icon" type="image/x-icon" />
+    
+    <!--CSS-->
+    <link href="Content/Styles/bootstrap-icons-1.3.0.css" rel="stylesheet" />
+    <link href="Content/Styles/bootstrap-5.0.0.min.css" rel="stylesheet" />
+    <link href="Content/Styles/dataTable/jquery.dataTables.1.10.19.min.css" rel="stylesheet" />
+    <link href="Content/Styles/chart/cheloChart.css" rel="stylesheet" />
+    <link href="Content/Styles/jquery.datetimepicker.css" rel="stylesheet" />
+    <!--JS-->
+    <script src="Content/Scripts/jquery-3.4.1.js"></script>
+    <script src="Content/Scripts/bootstrap.bundle.5.0.0.min.js"></script>
+    <script src="Content/Scripts/dataTable/jquery.dataTables.1.10.19.min.js"></script>
+    <script src="Content/Scripts/chart/chart.min.js"></script>
+    <script src="Content/Scripts/chart/cheloChart.js"></script>
+    <script src="Content/Scripts/jquery.datetimepicker.full.js"></script>
+</head>
+<body style="background-color: #f4f4f4">
+    <form runat="server">        
+
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="Default">Sitio de Cuna</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav">
+                        <li><a runat="server" id="hrefInicio" class="nav-link" href="/">Inicio</a></li>
+                        <li><a runat="server" id="hrefTemperatura" class="nav-link" href="Temperatura.aspx">Temperatura</a></li>
+                        <li><a runat="server" id="hrefAlarmas" class="nav-link" href="Alarmas.aspx">Alarmas</a></li>
+                        <li><a runat="server" id="hrefConsola" class="nav-link" href="Consola.aspx">Consola</a></li>
+                        <li><a runat="server" id="hrefConfiguracion" class="nav-link" href="Configuracion.aspx">Configuración</a></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+        <div class="container">
+            <div style="min-height: 30em">
+                <asp:ContentPlaceHolder ID="MainContent" runat="server">
+            </asp:ContentPlaceHolder>
+            </div>
+            
+            <hr />
+            <footer>
+                <p>&copy; <%: DateTime.Now.Year %> - Sitio Admin</p>
+            </footer>
+        </div>
+
+    </form>
+</body>
+</html>

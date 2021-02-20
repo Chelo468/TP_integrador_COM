@@ -29,62 +29,90 @@
 //DHT - Temperatura
 DHT dht(DHTPIN, DHTTYPE);
 int contCiclo = 0;
+int CICLO_MOSTRAR_TEMPERATURA_CONSOLA = 300;
 int cicloRefrescoTemperatura = 0;
+float temperatura_alarma_minima = 15;
+float temperatura_alarma_maxima = 30;
 
-int alarmaActivada = 0;
-int contAlarma = 0;
-float temperatura_alarma_minima = 25;
-float temperatura_alarma_maxima = 28;
+//Configuracion
+int DELAY_LOOP = 100;
 
 
 //SONIDO
 int valor_sonido;
+int aviso_sonido = 0;
 
 //Sensor Golpe
 int valor_sensor_golpe;
 
 //PROXIMIDAD
 int valor_proximidad;
+int aviso_proximidad = 0;
 
 
 //Activacion de alarmas
 int alarma_sonido_activada = 1;
-int alarma_temperatura_activada;
+int alarma_temperatura_activada = 1;
 int alarma_proximidad_activada = 1;
+int aviso_temperatura = 0;
+int TIEMPO_REFRESCO = 50;//5 segundos por los 100 de delay
+int DELAY_MENSAJES = 10;//Milisegundos
+int alarmaActivada = 0;
+int contAlarma = 0;
 
 
 //WIFI
 const char* SSID = "wifi casa";
 const char* PWD = "MglMcmqybT";
-
-//const char* ssid_inicial = "cuna_red";
-//const char* password_inicial = "123456";
+int DELAY_TRY_RECONNECT = 500;//Milisegundos
 
 // MQTT client
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient); 
-
 char* mqttServer = "broker.hivemq.com";
 int mqttPort = 1883;
+
+//Topicos
+const char* TOPIC_CONSOLA = "/com/consola";
+String TOPIC_CONSOLA_STRING;
+const char* TOPIC_REFRESCO_TEMPERATURA = "/swa/temperatura";
+String TOPIC_REFRESCO_TEMPERATURA_STRING;
+const char* TOPIC_ALARMA = "/swa/alarma";
+String TOPIC_ALARMA_STRING;
+const char* TOPIC_CONFIG_TEMPERATURA_MINIMA = "/com/cuna/configTemperaturaMinima";
+String TOPIC_CONFIG_TEMPERATURA_MINIMA_STRING;
+const char* TOPIC_CONFIG_TEMPERATURA_MAXIMA = "/com/cuna/configTemperaturaMaxima";
+String TOPIC_CONFIG_TEMPERATURA_MAXIMA_STRING;
+const char* TOPIC_SWITCH_ALARMA_SONIDO = "/com/cuna/switchAlarmaSonido";
+String TOPIC_SWITCH_ALARMA_SONIDO_STRING;
+const char* TOPIC_SWITCH_ALARMA_TEMPERATURA = "/com/cuna/switchAlarmaTemperatura";
+String TOPIC_SWITCH_ALARMA_TEMPERATURA_STRING;
+const char* TOPIC_SWITCH_ALARMA_PROXIMIDAD = "/com/cuna/switchAlarmaProximidad";
+String TOPIC_SWITCH_ALARMA_PROXIMIDAD_STRING;
+const char* TOPIC_GET_CONFIGURACION = "/com/cuna/getConfiguration";
+String TOPIC_GET_CONFIGURACION_STRING;
+const char* TOPIC_ENVIAR_CONFIGURACION = "/com/cuna/myConfiguration";
+String TOPIC_ENVIAR_CONFIGURACION_STRING;
 
 
 void setup() {
   //Activamos la salida por consola
   Serial.begin(115200);
 
+  //Seteo de pines del ESP32
   configurarPines();
 
-  //Inicializamos modulo dht
+  //Inicializamos modulo dht para lectura de humedad y temperatura del ambiente
   dht.begin();
 
   //WIFI
-  //inicializarWiFi();
   configurarYConectarWifi();
 
   //MQTT
   configurarMqtt();
 
-  alarma_temperatura_activada = 1;
+  //Obtenemos las constantes de los topicos en String
+  getTopicStrings();
 }
 
 void loop() {
@@ -123,7 +151,26 @@ void loop() {
     contAlarma = 0;
   }
 
-  delay(100);
+  delay(DELAY_LOOP);
+}
+
+void refrescarTemperatura(String mensaje){
+
+  int n = mensaje.length();
+
+  //Conversion de String a char[]
+  char char_array[n + 1];
+  
+  strcpy(char_array, mensaje.c_str());
+
+  for (int i = 0; i < n; i++)
+      char_array[i] = mensaje[i];
+
+  //Publicacion de mensaje
+  if (mqttClient.connected()){
+      mqttClient.publish(TOPIC_REFRESCO_TEMPERATURA, char_array);
+      delay(DELAY_MENSAJES);
+    }
 }
 
 void leerHumedad(){
@@ -132,63 +179,69 @@ void leerHumedad(){
 
   cicloRefrescoTemperatura++;
   
-  // Leemos la humedad relativa
-  float h = dht.readHumidity();
   // Leemos la temperatura en grados centígrados (por defecto)
   float t = dht.readTemperature();
-  // Leemos la temperatura en grados Fahrenheit
-  float f = dht.readTemperature(true);
 
   // Comprobamos si ha habido algún error en la lectura
-  if (isnan(h) || isnan(t) || isnan(f)) {
-    mostrarEnConsola("Error obteniendo los datos del sensor DHT11");
+  if (isnan(t)) {
+    if(cicloRefrescoTemperatura == 0 || cicloRefrescoTemperatura == TIEMPO_REFRESCO)
+     {
+        if(cicloRefrescoTemperatura > 0)
+        {
+          cicloRefrescoTemperatura = 0;
+        }
+        mostrarEnConsola("Error obteniendo los datos del sensor DHT11");
+     }
   }
   else  {
-      // Calcular el índice de calor en Fahrenheit
-      float hif = dht.computeHeatIndex(f, h);
-      // Calcular el índice de calor en grados centígrados
-      float hic = dht.computeHeatIndex(t, h, false);
   
       //Cada 10 tenemos 1 segundo por el delay de 100 milisegundos
-     if(contCiclo == 300)
+     if(contCiclo == CICLO_MOSTRAR_TEMPERATURA_CONSOLA)
      {
         contCiclo = 0;
 
-        mostrarEnConsola("Humedad: " + String(h) + " Temperatura: " + String(t) + " ºC");
+        mostrarEnConsola("Temperatura: " + String(t) + " ºC");
      }
 
-     if(cicloRefrescoTemperatura == 50)
+     if(cicloRefrescoTemperatura == 0 || cicloRefrescoTemperatura == TIEMPO_REFRESCO)
      {
+      if(cicloRefrescoTemperatura > 0)
+      {
         cicloRefrescoTemperatura = 0;
-        refrescarTemperatura("Temperatura: "+ String(t) + " ºC");
+      }
+      
+      refrescarTemperatura("Temperatura: " + String(t) + " ºC");
      }
+     else
+     {
+        //mostrarEnConsola(String(cicloRefrescoTemperatura));
+     }
+     
     if(alarma_temperatura_activada == 1)
      {
         if(t > temperatura_alarma_maxima || t < temperatura_alarma_minima)
         {
-          alarma("Temperatura " + String(t) + " ºC");  
+          
+
+          if(aviso_temperatura == 0 || aviso_temperatura == TIEMPO_REFRESCO)
+          {
+            if(aviso_temperatura > 0)
+            {
+              aviso_temperatura = 0;  
+            }
+            
+            alarma("Temperatura " + String(t) + " ºC");    
+          }
+
+          aviso_temperatura++;
+          
         }        
+        else
+        {
+          aviso_temperatura = 0;
+        }
      }
   }
-}
-
-void refrescarTemperatura(String mensaje){
-
-  int n = mensaje.length();
-
-  // declaring character array
-  char char_array[n + 1];
-
-  // copying the contents of the
-  // string to char array
-  strcpy(char_array, mensaje.c_str());
-
-  for (int i = 0; i < n; i++)
-      char_array[i] = mensaje[i];
-          
-  if (mqttClient.connected()){
-      mqttClient.publish("/swa/temperatura", char_array);
-    }
 }
 
 void leerSensorSonido(){
@@ -197,15 +250,28 @@ void leerSensorSonido(){
 
   if(valor_sonido == HIGH)
   {
-    //Serial.println("Microfono detectado.");
-
     if(alarma_sonido_activada == 1)
     {
-      alarma("Sonido");  
+      if(aviso_sonido == 0 || aviso_sonido == TIEMPO_REFRESCO)
+      {
+        if(aviso_sonido > 0)
+        {
+          aviso_sonido = 0;  
+        }
+        
+        alarma("Sonido");    
+      }
+
+      aviso_sonido++;
+      
     }
     
 
     mostrarEnConsola("Microfono detectado.");
+  }
+  else
+  {
+    aviso_sonido = 0;  
   }
 }
 
@@ -214,7 +280,6 @@ void leerSensorMovimiento(){
 
   if(valor_sensor_golpe == LOW)
   {
-    //Serial.println("Movimiento detectado.");
     alarma("Movimiento");
 
     mostrarEnConsola("Movimiento detectado.");
@@ -227,14 +292,27 @@ void leerSensorProximidad(){
 
   if(valor_proximidad == LOW)
   {
-    //Serial.println("Objeto aproximado.");
-
     if(alarma_proximidad_activada == 1)
     {
-      alarma("Proximidad");  
+      if(aviso_proximidad == 0 || aviso_proximidad == TIEMPO_REFRESCO)
+      {
+        if(aviso_proximidad > 0)
+        {
+          aviso_proximidad = 0;  
+        }
+
+        alarma("Proximidad"); 
+      }
+
+      aviso_proximidad++;
+       
     }
     
     mostrarEnConsola("Objeto aproximado.");
+  }
+  else
+  {
+    aviso_proximidad = 0;
   }
   
 }
@@ -255,26 +333,13 @@ void configurarPines(){
   pinMode(PIN_BUZZER, OUTPUT);
 }
 
-void inicializarWiFi(){
-  
-  WiFi.mode(WIFI_AP);
-  
-  //while(!WiFi.softAP(ssid_inicial, password_inicial))
-  //{
-  //  Serial.println(".");
-  //  delay(100);
-  //}
-}
-
 void configurarYConectarWifi(){
   WiFi.begin(SSID, PWD);
 
   while (WiFi.status() != WL_CONNECTED) {
     Serial.print(".");
-    delay(500);
-  }
-  
-  //Serial.print("Conectado a " + SSID);
+    delay(DELAY_TRY_RECONNECT);
+  } 
 
   String nombre_red;
 
@@ -282,76 +347,70 @@ void configurarYConectarWifi(){
     
     nombre_red = nombre_red + (char)SSID[i];
   }
+  
   mostrarEnConsola("Conectado a " + nombre_red);
 }
 
 void configurarMqtt(){
   mqttClient.setServer(mqttServer, mqttPort);
-  // set the callback function
+  
+  //Configuramos el método donde el dispositivo realizará la lectura de los mensajes a los que está suscripto
   mqttClient.setCallback(callback);
 }
 
 void alarma(String tipo){
 
-  alarmaActivada = 1;
-
-  //if(contAlarma == 0 || contAlarma == 100)
-  //{
-    if(contAlarma == 100)
-    {
-      contAlarma = 0;
-    }
+    alarmaActivada = 1;
     
-    //Serial.println("Alarma detectada: " + tipo);
-    mostrarEnConsola("Alarma detectada: " + tipo);
-  
     ledcWrite(LEDC_CHANNEL_0, 200);
     digitalWrite(PIN_BUZZER, HIGH);
-  
+
+  //Conversion de String a char[]
     int n = tipo.length();
    
-      // declaring character array
-      char char_array[n + 1];
-   
-      // copying the contents of the
-      // string to char array
-      strcpy(char_array, tipo.c_str());
-   
-      for (int i = 0; i < n; i++)
-          char_array[i] = tipo[i];
-  
-    if (mqttClient.connected()){
-      mqttClient.publish("/swa/alarma", char_array);
+    char char_array[n + 1];
+ 
+    strcpy(char_array, tipo.c_str());
+ 
+    for (int i = 0; i < n; i++)
+    {
+       char_array[i] = tipo[i];
     }
       
-
-      
-    //}
   
-}
+    if (mqttClient.connected()){
+      mqttClient.publish(TOPIC_ALARMA, char_array);
+
+      delay(DELAY_MENSAJES);
+    }
+
+    mostrarEnConsola("Alarma informada: " + tipo);
+ }
 
 void reconnect() {
   
-  //Serial.println("Conectando a Broker MQTT...");
-
   mostrarEnConsola("Conectando a Broker MQTT...");
   
   while (!mqttClient.connected()) {
-      //Serial.println("Reonectando a Broker MQTT...");
-
+    
       mostrarEnConsola("Reonectando a Broker MQTT...");
+
+      //Generacion de clientID
       String clientId = "ESP32Client-";
       clientId += String(random(0xffff), HEX);
       
       if (mqttClient.connect(clientId.c_str())) {
-        //Serial.println("Conectado a Broker MQTT.");
+        
         mostrarEnConsola("Conectado a Broker MQTT.");
-        // subscribe to topic
-        mqttClient.subscribe("/swa/commands");
-        mqttClient.subscribe("/com/cuna/configTemperaturaMinima");
-        mqttClient.subscribe("/com/cuna/switchAlarmaSonido");
-        mqttClient.subscribe("/com/cuna/switchAlarmaTemperatura");
-        mqttClient.subscribe("/com/cuna/switchAlarmaProximidad");
+        
+        //suscripcion a topicos
+        mqttClient.subscribe(TOPIC_CONFIG_TEMPERATURA_MINIMA);
+        mqttClient.subscribe(TOPIC_CONFIG_TEMPERATURA_MAXIMA);
+        mqttClient.subscribe(TOPIC_SWITCH_ALARMA_SONIDO);
+        mqttClient.subscribe(TOPIC_SWITCH_ALARMA_TEMPERATURA);
+        mqttClient.subscribe(TOPIC_SWITCH_ALARMA_PROXIMIDAD);
+        mqttClient.subscribe(TOPIC_GET_CONFIGURACION);
+        mqttClient.subscribe(TOPIC_ENVIAR_CONFIGURACION);
       }
       
   }
@@ -364,7 +423,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   
   for (int i = 0; i < strlen(topic); i++) {
     
-    topico = topico + (char)payload[i];
+    topico = topico + (char)topic[i];
   }
   
   for (int i = 0; i < length; i++) {
@@ -373,23 +432,29 @@ void callback(char* topic, byte* payload, unsigned int length) {
     
   }
 
-  mostrarEnConsola("Topico Recibido: " + topico);
-  mostrarEnConsola("Mesaje Recibido:" + mensaje);
-
-  bool es1 = mensaje == "1";
+  mostrarEnConsola("Topico Recibido: " + topico + "; Mesaje Recibido:" + mensaje);
   
+  bool igual = topico.equalsIgnoreCase(TOPIC_CONFIG_TEMPERATURA_MINIMA_STRING);
   
-  if (strcmp(topic,"/com/cuna/configTemperaturaMinima")==0){
-    // whatever you want for this topic
+  if(igual)
+  {
+    //Configuramos la temperatura minima obtenida del mensaje
     temperatura_alarma_minima = mensaje.toFloat(); 
   }
 
-  if(strcmp(topic,"/com/cuna/configTemperaturaMaxima") == 0){
+  igual = topico.equalsIgnoreCase(TOPIC_CONFIG_TEMPERATURA_MAXIMA_STRING);
+  
+  if(igual)
+  {
+    //Configuramos la temperatura maxima obtenida del mensaje
     temperatura_alarma_maxima = mensaje.toFloat();
   }
 
-  if(strcmp(topic,"/com/cuna/switchAlarmaTemperatura")==0){
-    if(es1){
+  igual = topico.equalsIgnoreCase(TOPIC_SWITCH_ALARMA_TEMPERATURA_STRING);
+  
+  if(igual)  
+  {
+    if(mensaje == "1"){
       alarma_temperatura_activada = 1;
     }
     else{
@@ -397,9 +462,11 @@ void callback(char* topic, byte* payload, unsigned int length) {
     }
   }
 
+  igual = topico.equalsIgnoreCase(TOPIC_SWITCH_ALARMA_SONIDO_STRING);
   
-  if(strcmp(topic,"/com/cuna/switchAlarmaSonido")==0){
-    if(es1 == 1){
+  if(igual)  
+  {
+    if(mensaje == "1"){
       alarma_sonido_activada = 1;
     }
     else{
@@ -407,46 +474,88 @@ void callback(char* topic, byte* payload, unsigned int length) {
     }
   }
 
-  if(strcmp(topic,"/com/cuna/switchAlarmaProximidad")==0){
-    if(es1 == 1){
+  igual = topico.equalsIgnoreCase(TOPIC_SWITCH_ALARMA_PROXIMIDAD_STRING);
+
+  if(igual)  
+  {
+    if(mensaje == "1"){
       alarma_proximidad_activada = 1;
     }
     else{
       alarma_proximidad_activada = 0;
     }
-  }
+  }  
 
-  if(mensaje == "alarma")
+  igual = topico.equalsIgnoreCase(TOPIC_GET_CONFIGURACION);
+
+  if(igual)  
   {
-      ledcWrite(LEDC_CHANNEL_0, 200);
-      digitalWrite(PIN_BUZZER, HIGH);
+    enviarConfiguracion();
+  }  
+}
 
-      delay(100);
-  }
+void enviarConfiguracion(){
 
+  String configuracion = "{";
+  configuracion = configuracion + "\"alarma_temperatura\" : \"" + String(alarma_temperatura_activada) + "\",";
+  configuracion = configuracion + "\"temperatura_minima\" : \"" + String(temperatura_alarma_minima) + "\",";
+  configuracion = configuracion + "\"temperatura_maxima\" : \"" + String(temperatura_alarma_maxima) + "\",";
+  configuracion = configuracion + "\"alarma_sonido\" : \"" + String(alarma_sonido_activada) + "\",";
+  configuracion = configuracion + "\"alarma_proximidad\" : \"" + String(alarma_proximidad_activada) + "\"";
+  configuracion = configuracion + "}";
   
+  //
+  int n = configuracion.length();
+
+  //Conversion de String a char[]
+  char char_array[n + 1];
+  
+  strcpy(char_array, configuracion.c_str());
+
+  for (int i = 0; i < n; i++)
+      char_array[i] = configuracion[i];
+
+  //Publicacion de mensaje
+  if (mqttClient.connected()){
+      mqttClient.publish(TOPIC_ENVIAR_CONFIGURACION, char_array);
+      delay(DELAY_MENSAJES);
+    }
 }
 
 void mostrarEnConsola(String mensaje){
 
     Serial.println(mensaje);
-  
+
+    //Conversion de String a char[]
     int n = mensaje.length();
  
-    // declaring character array
     char char_array[n + 1];
  
-    // copying the contents of the
-    // string to char array
-    strcpy(char_array, mensaje.c_str());
-
-    // copying the contents of the
-    // string to char array
     strcpy(char_array, mensaje.c_str());
  
     for (int i = 0; i < n; i++)
         char_array[i] = mensaje[i];
 
+
+    //Publicacion de mensaje en consola de broker
     if (mqttClient.connected())
-      mqttClient.publish("/com/consola", char_array);
+    {
+      mqttClient.publish(TOPIC_CONSOLA, char_array);
+      delay(DELAY_MENSAJES);
+    }
+      
+}
+
+void getTopicStrings(){
+ TOPIC_CONSOLA_STRING = String(TOPIC_CONSOLA);
+ TOPIC_REFRESCO_TEMPERATURA_STRING = String(TOPIC_REFRESCO_TEMPERATURA);
+ TOPIC_ALARMA_STRING = String(TOPIC_ALARMA);
+ TOPIC_CONFIG_TEMPERATURA_MINIMA_STRING = String(TOPIC_CONFIG_TEMPERATURA_MINIMA);
+ TOPIC_CONFIG_TEMPERATURA_MAXIMA_STRING = String(TOPIC_CONFIG_TEMPERATURA_MAXIMA);
+ TOPIC_SWITCH_ALARMA_SONIDO_STRING = String(TOPIC_SWITCH_ALARMA_SONIDO);
+ TOPIC_SWITCH_ALARMA_TEMPERATURA_STRING = String(TOPIC_SWITCH_ALARMA_TEMPERATURA);
+ TOPIC_SWITCH_ALARMA_PROXIMIDAD_STRING = String(TOPIC_SWITCH_ALARMA_PROXIMIDAD);
+ TOPIC_GET_CONFIGURACION_STRING = String(TOPIC_GET_CONFIGURACION);
+ TOPIC_ENVIAR_CONFIGURACION_STRING = String(TOPIC_ENVIAR_CONFIGURACION);
+ 
 }

@@ -10,6 +10,7 @@ using System.ServiceProcess;
 using System.Text;
 using System.Threading.Tasks;
 using System.Timers;
+using Utils;
 
 namespace ServicioMQTT
 {
@@ -17,9 +18,20 @@ namespace ServicioMQTT
     {
         private Timer _TimerMain = new Timer();
 
-        private double _TimeInterval { get; set; }
         private string _SqlConnection { get; set; }
         private string _logPath { get; set; }
+        private string _broker { get; set; }
+
+        private string[] topics = { "/swa/alarma", 
+                                    "/swa/temperatura", 
+                                    "/com/cuna/configTemperaturaMinima",
+                                    "/com/cuna/configTemperaturaMaxima",
+                                    "/com/cuna/switchAlarmaSonido",
+                                    "/com/cuna/switchAlarmaTemperatura",
+                                    "/com/cuna/switchAlarmaProximidad",
+                                    "/com/cuna/getConfiguration",
+                                    "/com/cuna/myConfiguration",
+                                    "/com/consola"};
         public Service1()
         {
             InitializeComponent();
@@ -27,20 +39,26 @@ namespace ServicioMQTT
             System.Net.ServicePointManager.SecurityProtocol = (System.Net.SecurityProtocolType)3072;
             System.Net.ServicePointManager.ServerCertificateValidationCallback = ((sender, certificate, chain, sslPolicyErrors) => true);
 
-            _TimeInterval = double.Parse(ConfigurationManager.AppSettings["TimeInterval"]);
             _SqlConnection = ConfigurationManager.AppSettings["sqlConnection"];
+            _broker = ConfigurationManager.AppSettings["brokerMqtt"];
 
-            _TimerMain.Interval = _TimeInterval;
-            _TimerMain.Elapsed += TimerMain_Elapsed;
+            ConectorMQTT.Instancia().conectar(_broker);
 
-            _TimerMain.Enabled = true;
+            suscribir();
+
+            //_TimerMain.Interval = _TimeInterval;
+            //_TimerMain.Elapsed += TimerMain_Elapsed;
+
+            //_TimerMain.Enabled = true;
         }
 
         protected override void OnStart(string[] args)
         {
             try
             {
-                ConectorMQTT.Instancia().conectar();
+                ConectorMQTT.Instancia().conectar(_broker);
+
+                suscribir();
                 //Log("Arranca el servicio");
 
                 //_TimerMain.Start();
@@ -53,6 +71,15 @@ namespace ServicioMQTT
 
                 return;
             }
+        }
+
+        private void suscribir()
+        {
+            for (int i = 0; i < topics.Length; i++)
+            {
+                ConectorMQTT.Instancia().suscribir(topics[i]);
+            }
+            
         }
 
         protected override void OnStop()
